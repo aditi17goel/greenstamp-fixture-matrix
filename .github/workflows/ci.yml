@@ -3,6 +3,9 @@ name: ci
 on:
   push:
   pull_request:
+
+permissions:
+  pull-requests: write
   # Inert until a merge queue is enabled on this repo; required for the
   # merge-queue measurement leg (no queue exists yet).
   merge_group:

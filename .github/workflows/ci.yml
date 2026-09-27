@@ -23,39 +23,39 @@ jobs:
           echo "tree=$(git rev-parse HEAD^{tree})" >> "$GITHUB_OUTPUT"
           echo "wf=$(sha256sum .github/workflows/ci.yml | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
-      # Same gate pattern as ci-dedupe's own ci workflow: the secrets
+      # Same gate pattern as greenstamp's own ci workflow: the secrets
       # context is unusable in step `if:` expressions, so detect
       # configuration in shell once and gate on this step's output.
       # Inert (plain pytest runs) until both secrets exist.
       - id: gate
         run: |
-          if [ -n "${{ secrets.CIDEDUPE_API_URL }}" ] && [ -n "${{ secrets.CIDEDUPE_CHECKOUT_TOKEN }}" ]; then
+          if [ -n "${{ secrets.GREENSTAMP_API_URL }}" ] && [ -n "${{ secrets.GREENSTAMP_CHECKOUT_TOKEN }}" ]; then
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
           fi
 
-      # The cidedupe action lives in the private ci-dedupe repo, which this
+      # The greenstamp action lives in the private greenstamp repo, which this
       # workflow cannot `uses:` directly (GitHub runs actions only from the
       # same or a public repository), so check it out at a pinned SHA.
       # Re-pin deliberately; the SHA is part of the measurement record.
       - if: steps.gate.outputs.enabled == 'true'
         uses: actions/checkout@v4
         with:
-          repository: aditi17goel/ci-dedupe
+          repository: aditi17goel/greenstamp
           ref: b1bc8eeaa1791df481a07db3847f1f3fa802c0f7
-          token: ${{ secrets.CIDEDUPE_CHECKOUT_TOKEN }}
-          path: .cidedupe-action
+          token: ${{ secrets.GREENSTAMP_CHECKOUT_TOKEN }}
+          path: .greenstamp-action
 
       # Skip when this exact cell already passed. Matrix dimensions travel
       # in inputs/tool-versions so each of the 6 cells is a distinct job
       # identity; without them every cell would share one identity.
       - id: dedupe
         if: steps.gate.outputs.enabled == 'true'
-        uses: ./.cidedupe-action
+        uses: ./.greenstamp-action
         with:
-          api-url: ${{ secrets.CIDEDUPE_API_URL }}
-          api-token: ${{ secrets.CIDEDUPE_API_TOKEN }}
+          api-url: ${{ secrets.GREENSTAMP_API_URL }}
+          api-token: ${{ secrets.GREENSTAMP_API_TOKEN }}
           mode: decide
           workflow-sha: ${{ steps.ids.outputs.wf }}
           tree-sha: ${{ steps.ids.outputs.tree }}
@@ -89,10 +89,10 @@ jobs:
           echo "duration=$((end - ${start:-$end}))" >> "$GITHUB_OUTPUT"
 
       - if: always() && steps.gate.outputs.enabled == 'true' && steps.dedupe.outputs.verdict != 'skip'
-        uses: ./.cidedupe-action
+        uses: ./.greenstamp-action
         with:
-          api-url: ${{ secrets.CIDEDUPE_API_URL }}
-          api-token: ${{ secrets.CIDEDUPE_API_TOKEN }}
+          api-url: ${{ secrets.GREENSTAMP_API_URL }}
+          api-token: ${{ secrets.GREENSTAMP_API_TOKEN }}
           mode: record
           workflow-sha: ${{ steps.ids.outputs.wf }}
           tree-sha: ${{ steps.ids.outputs.tree }}
